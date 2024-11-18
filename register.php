@@ -1,40 +1,39 @@
 <?php
-include 'lib/koneksi.php';
+include 'lib/koneksi.php'; // Pastikan file koneksi sudah benar
 
-if (isset($_POST['btn'])) {
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = $_POST['username'];
-    $password = $_POST['pwd'];
+    $password = $_POST['password'];
 
-    // Menyiapkan query menggunakan prepared statement
-    $sqluser = $conn->prepare("SELECT * FROM tbuser WHERE username = :username");
-    $sqluser->bindParam(':username', $username, PDO::PARAM_STR);
-    $sqluser->execute();
+    // Hash password menggunakan password_hash() untuk keamanan
+    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-    // Memeriksa apakah username ditemukan
-    if ($sqluser->rowCount() > 0) {
-        $user = $sqluser->fetch(PDO::FETCH_ASSOC);
+    // Menyiapkan SQL untuk memasukkan data
+    $sql = "INSERT INTO tbuser (username, password) VALUES (:username, :password)";
+    $stmt = $conn->prepare($sql);
+    
+    // Bind parameter untuk menghindari SQL injection
+    $stmt->bindParam(':username', $username);
+    $stmt->bindParam(':password', $hashed_password);
 
-        // Verifikasi password (menggunakan password_verify untuk hash)
-        if ($password == $user['password']) {
-            $_SESSION['id'] = $user['id'];  // Menyimpan id user di session
-            header('Location: index.php');   // Redirect ke halaman dashboard
-            exit();
-        } else {
-            $error = "Username atau Password salah!";
-        }
+    // Mengeksekusi perintah
+    if ($stmt->execute()) {
+        // Redirect ke halaman login jika berhasil
+        header("Location: login.php"); 
+        exit;  // Pastikan untuk menghentikan eksekusi lebih lanjut
     } else {
-        $error = "Username atau Password salah!";
+        echo "<div class='error-message'>Error: Gagal menambahkan data.</div>";
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Form</title>
+    <title>Form Pendaftaran</title>
     <style>
+        /* Gaya CSS tetap sama dengan yang sebelumnya */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -106,26 +105,14 @@ if (isset($_POST['btn'])) {
             font-size: 14px;
             margin-top: 10px;
         }
-
-        .register-link {
-            margin-top: 15px;
-            display: inline-block;
-            font-size: 14px;
-            color: #d81b60;
-            text-decoration: none;
-        }
-
-        .register-link:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
 
 <div class="login-container">
-    <h2>Login</h2>
+    <h2>Buat Akun Baru</h2>
     <?php if (isset($error)) { echo "<div class='error-message'>$error</div>"; } ?>
-    <form action="index.php" method="POST">
+    <form action="register.php" method="POST"> <!-- Pastikan form mengarah ke register.php -->
         <div class="input-group">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" required>
@@ -134,9 +121,8 @@ if (isset($_POST['btn'])) {
             <label for="password">Password</label>
             <input type="password" id="password" name="password" required>
         </div>
-        <button type="submit" name="btn" class="login-btn">Login</button>
+        <button type="submit" name="btn" class="login-btn">Daftar</button>
     </form>
-    <a href="register.php" class="register-link">Belum punya akun? Daftar sekarang!</a>
 </div>
 
 </body>
